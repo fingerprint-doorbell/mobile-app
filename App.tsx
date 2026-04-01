@@ -6,6 +6,7 @@ import { RootStackParamList } from './src/navigation';
 import SensorListScreen from './src/screens/SensorListScreen';
 import SensorFormScreen from './src/screens/SensorFormScreen';
 import FingerprintListScreen from './src/screens/FingerprintListScreen';
+import PinCodeListScreen from './src/screens/PinCodeListScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -39,6 +40,11 @@ export default function App() {
             name="FingerprintList"
             component={FingerprintListScreen}
             options={{ title: 'Fingerprints' }}
+          />
+          <Stack.Screen
+            name="PinCodeList"
+            component={PinCodeListScreen}
+            options={{ title: 'PIN Codes' }}
           />
         </Stack.Navigator>
       </NavigationContainer>

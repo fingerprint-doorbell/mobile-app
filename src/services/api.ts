@@ -1,4 +1,4 @@
-import { SensorConfig, Fingerprint, SensorStatus, EnrollResponse, FingerprintTemplate, ImportResponse } from '../types';
+import { SensorConfig, Fingerprint, SensorStatus, EnrollResponse, FingerprintTemplate, ImportResponse, PinCode, PinCodeStatus } from '../types';
 
 function buildHeaders(sensor: SensorConfig): Record<string, string> {
   const headers: Record<string, string> = {};
@@ -12,6 +12,12 @@ function baseUrl(sensor: SensorConfig): string {
   const ip = sensor.ipAddress.replace(/\/+$/, '');
   const protocol = ip.startsWith('http') ? '' : 'http://';
   return `${protocol}${ip}/fingerprint`;
+}
+
+function pinCodeBaseUrl(sensor: SensorConfig): string {
+  const ip = sensor.ipAddress.replace(/\/+$/, '');
+  const protocol = ip.startsWith('http') ? '' : 'http://';
+  return `${protocol}${ip}/pincode`;
 }
 
 export async function listFingerprints(sensor: SensorConfig): Promise<Fingerprint[]> {
@@ -180,4 +186,100 @@ export async function importTemplate(
   }
   
   throw new Error('No chunks to send');
+}
+
+// ==================== PIN CODE API ====================
+
+export async function listPinCodes(sensor: SensorConfig): Promise<PinCode[]> {
+  const response = await fetch(`${pinCodeBaseUrl(sensor)}/list`, {
+    headers: buildHeaders(sensor),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to list PIN codes: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function getPinCodeStatus(sensor: SensorConfig): Promise<PinCodeStatus> {
+  const response = await fetch(`${pinCodeBaseUrl(sensor)}/status`, {
+    headers: buildHeaders(sensor),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to get PIN code status: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function addPinCode(
+  sensor: SensorConfig,
+  id: number,
+  code: string,
+  name: string,
+): Promise<void> {
+  const response = await fetch(
+    `${pinCodeBaseUrl(sensor)}/add?id=${id}&code=${encodeURIComponent(code)}&name=${encodeURIComponent(name)}`,
+    {
+      method: 'POST',
+      headers: buildHeaders(sensor),
+    },
+  );
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Failed to add PIN code: ${response.status}`);
+  }
+}
+
+export async function deletePinCode(sensor: SensorConfig, id: number): Promise<void> {
+  const response = await fetch(`${pinCodeBaseUrl(sensor)}/delete?id=${id}`, {
+    method: 'POST',
+    headers: buildHeaders(sensor),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to delete PIN code: ${response.status}`);
+  }
+}
+
+export async function deleteAllPinCodes(sensor: SensorConfig): Promise<void> {
+  const response = await fetch(`${pinCodeBaseUrl(sensor)}/delete_all`, {
+    method: 'POST',
+    headers: buildHeaders(sensor),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to delete all PIN codes: ${response.status}`);
+  }
+}
+
+export async function renamePinCode(
+  sensor: SensorConfig,
+  id: number,
+  name: string,
+): Promise<void> {
+  const response = await fetch(
+    `${pinCodeBaseUrl(sensor)}/rename?id=${id}&name=${encodeURIComponent(name)}`,
+    {
+      method: 'POST',
+      headers: buildHeaders(sensor),
+    },
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to rename PIN code: ${response.status}`);
+  }
+}
+
+export async function updatePinCode(
+  sensor: SensorConfig,
+  id: number,
+  code: string,
+): Promise<void> {
+  const response = await fetch(
+    `${pinCodeBaseUrl(sensor)}/update?id=${id}&code=${encodeURIComponent(code)}`,
+    {
+      method: 'POST',
+      headers: buildHeaders(sensor),
+    },
+  );
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Failed to update PIN code: ${response.status}`);
+  }
 }
