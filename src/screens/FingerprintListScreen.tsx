@@ -558,6 +558,51 @@ export default function FingerprintListScreen({ route, navigation }: Props) {
             </View>
           </View>
         </Modal>
+
+        {/* Factory Reset Button - for when pairing fails due to password mismatch */}
+        <View style={styles.factoryResetContainer}>
+          <Text style={styles.factoryResetHint}>
+            If pairing fails, the sensor may have a stored password. Try factory reset:
+          </Text>
+          <TouchableOpacity 
+            style={styles.factoryResetButton} 
+            onPress={() => setFactoryResetConfirmVisible(true)}
+          >
+            <Text style={styles.factoryResetText}>Factory Reset Sensor</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Factory Reset Confirm Modal */}
+        <Modal visible={factoryResetConfirmVisible} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modal}>
+              <Text style={styles.modalTitle}>Factory Reset Sensor</Text>
+              <Text style={styles.modalLabel}>
+                This will delete ALL fingerprints stored on the sensor and reset the password to default. This cannot be undone!
+              </Text>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancel}
+                  onPress={() => setFactoryResetConfirmVisible(false)}
+                  disabled={factoryResetting}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalSave, styles.modalDestructive]}
+                  onPress={confirmFactoryReset}
+                  disabled={factoryResetting}
+                >
+                  {factoryResetting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.modalSaveText}>Reset</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   }
@@ -902,6 +947,19 @@ const styles = StyleSheet.create({
     borderColor: '#d9534f',
   },
   factoryResetText: { color: '#d9534f', fontSize: 15, fontWeight: '600' },
+  factoryResetContainer: {
+    position: 'absolute',
+    bottom: 32,
+    left: 32,
+    right: 32,
+    alignItems: 'center',
+  },
+  factoryResetHint: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
   emptyIcon: { fontSize: 48, marginBottom: 16 },
   emptyTitle: { fontSize: 20, fontWeight: '600', color: '#333', marginBottom: 8 },
   emptyText: { fontSize: 14, color: '#888', textAlign: 'center' },
