@@ -28,6 +28,7 @@ import {
   importTemplate,
   pairSensor,
   unpairSensor,
+  factoryResetSensor,
 } from '../services/api';
 import { loadSensors } from '../services/storage';
 import type { RootStackParamList } from '../navigation';
@@ -78,6 +79,8 @@ export default function FingerprintListScreen({ route, navigation }: Props) {
   const [pairing, setPairing] = useState(false);
   const [pairOptionsVisible, setPairOptionsVisible] = useState(false);
   const [unpairConfirmVisible, setUnpairConfirmVisible] = useState(false);
+  const [factoryResetConfirmVisible, setFactoryResetConfirmVisible] = useState(false);
+  const [factoryResetting, setFactoryResetting] = useState(false);
 
   // Escape key handlers for modals
   useEscapeKey(deleteModalVisible, () => setDeleteModalVisible(false));
@@ -101,6 +104,7 @@ export default function FingerprintListScreen({ route, navigation }: Props) {
   });
   useEscapeKey(pairOptionsVisible, () => setPairOptionsVisible(false));
   useEscapeKey(unpairConfirmVisible, () => setUnpairConfirmVisible(false));
+  useEscapeKey(factoryResetConfirmVisible, () => !factoryResetting && setFactoryResetConfirmVisible(false));
 
   React.useEffect(() => {
     navigation.setOptions({
@@ -364,6 +368,26 @@ export default function FingerprintListScreen({ route, navigation }: Props) {
     }
   };
 
+  const confirmFactoryReset = async () => {
+    setFactoryResetting(true);
+    try {
+      await factoryResetSensor(sensor);
+      setSensorPaired(false);
+      setFactoryResetConfirmVisible(false);
+      // Refresh the screen
+      setLoading(true);
+      fetchFingerprints();
+    } catch (e: any) {
+      if (Platform.OS === 'web') {
+        window.alert(e.message || 'Factory reset failed');
+      } else {
+        Alert.alert('Error', e.message || 'Factory reset failed');
+      }
+    } finally {
+      setFactoryResetting(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -382,6 +406,44 @@ export default function FingerprintListScreen({ route, navigation }: Props) {
         <TouchableOpacity style={styles.retryButton} onPress={() => { setLoading(true); fetchFingerprints(); }}>
           <Text style={styles.retryText}>Retry</Text>
         </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.factoryResetButton} 
+          onPress={() => setFactoryResetConfirmVisible(true)}
+        >
+          <Text style={styles.factoryResetText}>Factory Reset Sensor</Text>
+        </TouchableOpacity>
+
+        {/* Factory Reset Confirm Modal */}
+        <Modal visible={factoryResetConfirmVisible} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modal}>
+              <Text style={styles.modalTitle}>Factory Reset Sensor</Text>
+              <Text style={styles.modalLabel}>
+                This will delete ALL fingerprints stored on the sensor and reset the password to default. This cannot be undone!
+              </Text>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancel}
+                  onPress={() => setFactoryResetConfirmVisible(false)}
+                  disabled={factoryResetting}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalSave, styles.modalDestructive]}
+                  onPress={confirmFactoryReset}
+                  disabled={factoryResetting}
+                >
+                  {factoryResetting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.modalSaveText}>Reset</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   }
@@ -831,6 +893,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   retryText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  factoryResetButton: {
+    marginTop: 16,
+    borderRadius: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#d9534f',
+  },
+  factoryResetText: { color: '#d9534f', fontSize: 15, fontWeight: '600' },
   emptyIcon: { fontSize: 48, marginBottom: 16 },
   emptyTitle: { fontSize: 20, fontWeight: '600', color: '#333', marginBottom: 8 },
   emptyText: { fontSize: 14, color: '#888', textAlign: 'center' },

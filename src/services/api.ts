@@ -132,6 +132,17 @@ export async function unpairSensor(sensor: SensorConfig): Promise<void> {
   }
 }
 
+export async function factoryResetSensor(sensor: SensorConfig): Promise<void> {
+  const response = await fetch(`${baseUrl(sensor)}/factory_reset`, {
+    method: 'POST',
+    headers: buildHeaders(sensor),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Factory reset failed: ${response.status}`);
+  }
+}
+
 export async function exportTemplate(
   sensor: SensorConfig,
   id: number,
