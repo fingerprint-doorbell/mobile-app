@@ -24,7 +24,11 @@ import {
   deleteAllPinCodes,
   renamePinCode,
   updatePinCode,
+  exportPinCode,
+  importPinCode,
 } from '../services/api';
+import { loadSensors } from '../services/storage';
+import type { SensorConfig } from '../types';
 import type { RootStackParamList } from '../navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PinCodeList'>;
@@ -65,10 +69,21 @@ export default function PinCodeListScreen({ route, navigation }: Props) {
   const [editCodeTarget, setEditCodeTarget] = useState<PinCode | null>(null);
   const [newCode, setNewCode] = useState('');
 
+  const [copyModalVisible, setCopyModalVisible] = useState(false);
+  const [copyTarget, setCopyTarget] = useState<PinCode | null>(null);
+  const [otherSensors, setOtherSensors] = useState<SensorConfig[]>([]);
+  const [copying, setCopying] = useState(false);
+  const [copyStatus, setCopyStatus] = useState('');
+
   useEscapeKey(deleteModalVisible, () => setDeleteModalVisible(false));
   useEscapeKey(renameModalVisible, () => setRenameModalVisible(false));
   useEscapeKey(addModalVisible, () => setAddModalVisible(false));
   useEscapeKey(editCodeModalVisible, () => setEditCodeModalVisible(false));
+  useEscapeKey(copyModalVisible, () => {
+    if (!copying) {
+      setCopyModalVisible(false);
+    }
+  });
 
   React.useEffect(() => {
     navigation.setOptions({
@@ -170,6 +185,57 @@ export default function PinCodeListScreen({ route, navigation }: Props) {
       Alert.alert('Success', 'PIN code updated');
     } catch (e: any) {
       Alert.alert('Error', e.message);
+    }
+  };
+
+  const openCopyModal = async (pc: PinCode) => {
+    setCopyTarget(pc);
+    setCopying(false);
+    setCopyStatus('');
+
+    try {
+      const allSensors = await loadSensors();
+      const others = allSensors.filter((s) => s.id !== sensor.id);
+      setOtherSensors(others);
+      setCopyModalVisible(true);
+    } catch (e: any) {
+      Alert.alert('Error', 'Failed to load sensors');
+    }
+  };
+
+  const handleCopyTo = async (targetSensor: SensorConfig) => {
+    if (!copyTarget) return;
+
+    setCopying(true);
+    setCopyStatus(`Exporting from ${sensor.name}...`);
+
+    try {
+      const pinData = await exportPinCode(sensor, copyTarget.id);
+
+      setCopyStatus(`Importing to ${targetSensor.name}...`);
+
+      const targetPinCodes = await listPinCodes(targetSensor);
+      const usedIds = new Set(targetPinCodes.map((p) => p.id));
+      let newId = copyTarget.id;
+      if (usedIds.has(newId)) {
+        newId = 1;
+        while (usedIds.has(newId)) {
+          newId++;
+        }
+      }
+
+      await importPinCode(targetSensor, pinData, newId);
+
+      setCopying(false);
+      setCopyModalVisible(false);
+      Alert.alert(
+        'Success',
+        `PIN code "${pinData.name}" copied to ${targetSensor.name} as ID ${newId}.`
+      );
+    } catch (e: any) {
+      setCopying(false);
+      setCopyStatus('');
+      Alert.alert('Error', e.message || 'Failed to copy PIN code');
     }
   };
 
@@ -291,6 +357,12 @@ export default function PinCodeListScreen({ route, navigation }: Props) {
                 onPress={() => openEditCodeModal(item)}
               >
                 <Text style={styles.actionText}>Change</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.copyButton]}
+                onPress={() => openCopyModal(item)}
+              >
+                <Text style={styles.actionText}>Copy</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionButton, styles.deleteButton]}
@@ -441,6 +513,55 @@ export default function PinCodeListScreen({ route, navigation }: Props) {
           </View>
         </View>
       </Modal>
+
+      {/* Copy Modal */}
+      <Modal visible={copyModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Copy PIN Code</Text>
+            {!copying ? (
+              <>
+                <Text style={styles.modalLabel}>
+                  Copy "{copyTarget?.name}" to another sensor:
+                </Text>
+                {otherSensors.length === 0 ? (
+                  <Text style={styles.noSensorsText}>
+                    No other sensors configured.
+                  </Text>
+                ) : (
+                  <View style={styles.sensorList}>
+                    {otherSensors.map((s) => (
+                      <TouchableOpacity
+                        key={s.id}
+                        style={styles.sensorOption}
+                        onPress={() => handleCopyTo(s)}
+                      >
+                        <Text style={styles.sensorOptionName}>{s.name}</Text>
+                        <Text style={styles.sensorOptionIp}>{s.ipAddress}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={[styles.modalCancel, { marginTop: 16, alignSelf: 'center' }]}
+                  onPress={() => setCopyModalVisible(false)}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <ActivityIndicator
+                  size="large"
+                  color="#4a90d9"
+                  style={{ marginVertical: 16 }}
+                />
+                <Text style={styles.copyStatusText}>{copyStatus}</Text>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -554,4 +675,37 @@ const styles = StyleSheet.create({
   },
   modalSaveText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   modalDelete: { backgroundColor: '#d9534f' },
+  copyButton: { backgroundColor: '#e8f4e8' },
+  noSensorsText: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginVertical: 16,
+  },
+  sensorList: {
+    maxHeight: 200,
+  },
+  sensorOption: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 8,
+  },
+  sensorOptionName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  sensorOptionIp: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  copyStatusText: {
+    fontSize: 15,
+    color: '#555',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
 });

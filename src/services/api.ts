@@ -283,3 +283,29 @@ export async function updatePinCode(
     throw new Error(error.error || `Failed to update PIN code: ${response.status}`);
   }
 }
+
+export interface PinCodeExport {
+  id: number;
+  name: string;
+  code: string;
+}
+
+export async function exportPinCode(sensor: SensorConfig, id: number): Promise<PinCodeExport> {
+  const response = await fetch(`${pinCodeBaseUrl(sensor)}/export?id=${id}`, {
+    headers: buildHeaders(sensor),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to export PIN code: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function importPinCode(
+  sensor: SensorConfig,
+  pinCode: PinCodeExport,
+  newId?: number,
+): Promise<void> {
+  // Use provided newId or keep original id
+  const targetId = newId ?? pinCode.id;
+  return addPinCode(sensor, targetId, pinCode.code, pinCode.name);
+}
