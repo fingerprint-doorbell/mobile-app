@@ -34,3 +34,13 @@ export interface ImportResponse {
   id: number;
   name: string;
 }
+
+export interface PinCode {
+  id: number;
+  name: string;
+}
+
+export interface PinCodeStatus {
+  enabled: boolean;
+  count: number;
+}

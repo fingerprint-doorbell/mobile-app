@@ -45,7 +45,7 @@ function createWindow() {
   });
 
   // Hide the menu bar
-  Menu.setApplicationMenu(null);
+  //Menu.setApplicationMenu(null);
 
   // Load the Expo web build or dev server
   const isDev = process.env.NODE_ENV === 'development';

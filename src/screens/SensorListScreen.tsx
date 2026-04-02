@@ -8,6 +8,7 @@ import {
   Modal,
   TextInput,
   SectionList,
+  SectionListData,
   Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -131,11 +132,8 @@ export default function SensorListScreen({ navigation }: Props) {
   };
 
   const renderSensorCard = (item: SensorConfig) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => navigation.navigate('FingerprintList', { sensor: item })}
-    >
-      <View style={styles.cardContent}>
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
         <View style={styles.cardInfo}>
           <Text style={styles.cardName}>{item.name}</Text>
           <Text style={styles.cardIp}>{item.ipAddress}</Text>
@@ -153,7 +151,23 @@ export default function SensorListScreen({ navigation }: Props) {
           <Text style={styles.deleteText}>Delete</Text>
         </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+      <View style={styles.cardActions}>
+        <TouchableOpacity
+          style={styles.navButton}
+          onPress={() => navigation.navigate('FingerprintList', { sensor: item })}
+        >
+          <Text style={styles.navIcon}>👆</Text>
+          <Text style={styles.navText}>Fingerprints</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.navButton}
+          onPress={() => navigation.navigate('PinCodeList', { sensor: item })}
+        >
+          <Text style={styles.navIcon}>🔢</Text>
+          <Text style={styles.navText}>PIN Codes</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 
   const renderDiscoveredCard = (item: DiscoveredDevice) => (
@@ -188,16 +202,16 @@ export default function SensorListScreen({ navigation }: Props) {
           </Text>
         </View>
       ) : (
-        <SectionList
+        <SectionList<DiscoveredDevice | SensorConfig, { title: string; type: 'discovered' | 'sensor' }>
           sections={[
             ...(newDiscoveredDevices.length > 0
-              ? [{ title: 'Discovered', data: newDiscoveredDevices, type: 'discovered' as const }]
+              ? [{ title: 'Discovered', data: newDiscoveredDevices as (DiscoveredDevice | SensorConfig)[], type: 'discovered' as const }]
               : []),
             ...(sensors.length > 0
-              ? [{ title: 'My Doorbells', data: sensors, type: 'sensor' as const }]
+              ? [{ title: 'My Doorbells', data: sensors as (DiscoveredDevice | SensorConfig)[], type: 'sensor' as const }]
               : []),
           ]}
-          keyExtractor={(item, index) => ('id' in item ? item.id : item.name) + index}
+          keyExtractor={(item, index) => ('id' in item ? item.id : (item as DiscoveredDevice).name) + index}
           contentContainerStyle={styles.list}
           renderSectionHeader={({ section }) => (
             <Text style={styles.sectionHeader}>{section.title}</Text>
@@ -316,10 +330,31 @@ const styles = StyleSheet.create({
     borderColor: '#4a90d9',
     borderStyle: 'dashed',
   },
+  cardHeader: { flexDirection: 'row', alignItems: 'center' },
   cardContent: { flexDirection: 'row', alignItems: 'center' },
   cardInfo: { flex: 1 },
   cardName: { fontSize: 17, fontWeight: '600', color: '#333' },
   cardIp: { fontSize: 13, color: '#888', marginTop: 4 },
+  cardActions: {
+    flexDirection: 'row',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    gap: 10,
+  },
+  navButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  navIcon: { fontSize: 18, marginRight: 8 },
+  navText: { fontSize: 14, fontWeight: '500', color: '#333' },
   editButton: {
     paddingHorizontal: 14,
     paddingVertical: 8,
