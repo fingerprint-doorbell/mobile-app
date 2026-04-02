@@ -81,6 +81,7 @@ export default function FingerprintListScreen({ route, navigation }: Props) {
   const [unpairConfirmVisible, setUnpairConfirmVisible] = useState(false);
   const [factoryResetConfirmVisible, setFactoryResetConfirmVisible] = useState(false);
   const [factoryResetting, setFactoryResetting] = useState(false);
+  const [factoryResetPassword, setFactoryResetPassword] = useState('');
 
   // Escape key handlers for modals
   useEscapeKey(deleteModalVisible, () => setDeleteModalVisible(false));
@@ -371,9 +372,10 @@ export default function FingerprintListScreen({ route, navigation }: Props) {
   const confirmFactoryReset = async () => {
     setFactoryResetting(true);
     try {
-      await factoryResetSensor(sensor);
+      await factoryResetSensor(sensor, factoryResetPassword || undefined);
       setSensorPaired(false);
       setFactoryResetConfirmVisible(false);
+      setFactoryResetPassword('');
       // Refresh the screen
       setLoading(true);
       fetchFingerprints();
@@ -419,12 +421,22 @@ export default function FingerprintListScreen({ route, navigation }: Props) {
             <View style={styles.modal}>
               <Text style={styles.modalTitle}>Factory Reset Sensor</Text>
               <Text style={styles.modalLabel}>
-                This will delete ALL fingerprints stored on the sensor and reset the password to default. This cannot be undone!
+                Enter the current sensor password (hex) to authenticate. This will delete ALL fingerprints and reset to default password.
               </Text>
+              <TextInput
+                style={styles.modalInput}
+                value={factoryResetPassword}
+                onChangeText={setFactoryResetPassword}
+                placeholder="e.g. 12345678 (leave empty if unknown)"
+                autoCapitalize="characters"
+                autoFocus
+                maxLength={8}
+                onSubmitEditing={confirmFactoryReset}
+              />
               <View style={styles.modalButtons}>
                 <TouchableOpacity
                   style={styles.modalCancel}
-                  onPress={() => setFactoryResetConfirmVisible(false)}
+                  onPress={() => { setFactoryResetConfirmVisible(false); setFactoryResetPassword(''); }}
                   disabled={factoryResetting}
                 >
                   <Text style={styles.modalCancelText}>Cancel</Text>
@@ -578,12 +590,22 @@ export default function FingerprintListScreen({ route, navigation }: Props) {
             <View style={styles.modal}>
               <Text style={styles.modalTitle}>Factory Reset Sensor</Text>
               <Text style={styles.modalLabel}>
-                This will delete ALL fingerprints stored on the sensor and reset the password to default. This cannot be undone!
+                Enter the current sensor password (hex) to authenticate. This will delete ALL fingerprints and reset to default password.
               </Text>
+              <TextInput
+                style={styles.modalInput}
+                value={factoryResetPassword}
+                onChangeText={setFactoryResetPassword}
+                placeholder="e.g. 12345678 (leave empty if unknown)"
+                autoCapitalize="characters"
+                autoFocus
+                maxLength={8}
+                onSubmitEditing={confirmFactoryReset}
+              />
               <View style={styles.modalButtons}>
                 <TouchableOpacity
                   style={styles.modalCancel}
-                  onPress={() => setFactoryResetConfirmVisible(false)}
+                  onPress={() => { setFactoryResetConfirmVisible(false); setFactoryResetPassword(''); }}
                   disabled={factoryResetting}
                 >
                   <Text style={styles.modalCancelText}>Cancel</Text>
