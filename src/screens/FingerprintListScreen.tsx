@@ -28,7 +28,6 @@ import {
   importTemplate,
   pairSensor,
   unpairSensor,
-  factoryResetSensor,
 } from '../services/api';
 import { loadSensors } from '../services/storage';
 import type { RootStackParamList } from '../navigation';
@@ -79,9 +78,6 @@ export default function FingerprintListScreen({ route, navigation }: Props) {
   const [pairing, setPairing] = useState(false);
   const [pairOptionsVisible, setPairOptionsVisible] = useState(false);
   const [unpairConfirmVisible, setUnpairConfirmVisible] = useState(false);
-  const [factoryResetConfirmVisible, setFactoryResetConfirmVisible] = useState(false);
-  const [factoryResetting, setFactoryResetting] = useState(false);
-  const [factoryResetPassword, setFactoryResetPassword] = useState('');
 
   // Escape key handlers for modals
   useEscapeKey(deleteModalVisible, () => setDeleteModalVisible(false));
@@ -105,7 +101,6 @@ export default function FingerprintListScreen({ route, navigation }: Props) {
   });
   useEscapeKey(pairOptionsVisible, () => setPairOptionsVisible(false));
   useEscapeKey(unpairConfirmVisible, () => setUnpairConfirmVisible(false));
-  useEscapeKey(factoryResetConfirmVisible, () => !factoryResetting && setFactoryResetConfirmVisible(false));
 
   React.useEffect(() => {
     navigation.setOptions({
@@ -369,27 +364,6 @@ export default function FingerprintListScreen({ route, navigation }: Props) {
     }
   };
 
-  const confirmFactoryReset = async () => {
-    setFactoryResetting(true);
-    try {
-      await factoryResetSensor(sensor, factoryResetPassword || undefined);
-      setSensorPaired(false);
-      setFactoryResetConfirmVisible(false);
-      setFactoryResetPassword('');
-      // Refresh the screen
-      setLoading(true);
-      fetchFingerprints();
-    } catch (e: any) {
-      if (Platform.OS === 'web') {
-        window.alert(e.message || 'Factory reset failed');
-      } else {
-        Alert.alert('Error', e.message || 'Factory reset failed');
-      }
-    } finally {
-      setFactoryResetting(false);
-    }
-  };
-
   if (loading) {
     return (
       <View style={styles.center}>
@@ -408,54 +382,6 @@ export default function FingerprintListScreen({ route, navigation }: Props) {
         <TouchableOpacity style={styles.retryButton} onPress={() => { setLoading(true); fetchFingerprints(); }}>
           <Text style={styles.retryText}>Retry</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.factoryResetButton} 
-          onPress={() => setFactoryResetConfirmVisible(true)}
-        >
-          <Text style={styles.factoryResetText}>Factory Reset Sensor</Text>
-        </TouchableOpacity>
-
-        {/* Factory Reset Confirm Modal */}
-        <Modal visible={factoryResetConfirmVisible} transparent animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modal}>
-              <Text style={styles.modalTitle}>Factory Reset Sensor</Text>
-              <Text style={styles.modalLabel}>
-                Enter the current sensor password (hex) to authenticate. This will delete ALL fingerprints and reset to default password.
-              </Text>
-              <TextInput
-                style={styles.modalInput}
-                value={factoryResetPassword}
-                onChangeText={setFactoryResetPassword}
-                placeholder="e.g. 12345678 (leave empty if unknown)"
-                autoCapitalize="characters"
-                autoFocus
-                maxLength={8}
-                onSubmitEditing={confirmFactoryReset}
-              />
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={styles.modalCancel}
-                  onPress={() => { setFactoryResetConfirmVisible(false); setFactoryResetPassword(''); }}
-                  disabled={factoryResetting}
-                >
-                  <Text style={styles.modalCancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalSave, styles.modalDestructive]}
-                  onPress={confirmFactoryReset}
-                  disabled={factoryResetting}
-                >
-                  {factoryResetting ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.modalSaveText}>Reset</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
       </View>
     );
   }
@@ -565,61 +491,6 @@ export default function FingerprintListScreen({ route, navigation }: Props) {
                   onPress={confirmUnpair}
                 >
                   <Text style={styles.modalSaveText}>Unpair</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Factory Reset Button - for when pairing fails due to password mismatch */}
-        <View style={styles.factoryResetContainer}>
-          <Text style={styles.factoryResetHint}>
-            If pairing fails, the sensor may have a stored password. Try factory reset:
-          </Text>
-          <TouchableOpacity 
-            style={styles.factoryResetButton} 
-            onPress={() => setFactoryResetConfirmVisible(true)}
-          >
-            <Text style={styles.factoryResetText}>Factory Reset Sensor</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Factory Reset Confirm Modal */}
-        <Modal visible={factoryResetConfirmVisible} transparent animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modal}>
-              <Text style={styles.modalTitle}>Factory Reset Sensor</Text>
-              <Text style={styles.modalLabel}>
-                Enter the current sensor password (hex) to authenticate. This will delete ALL fingerprints and reset to default password.
-              </Text>
-              <TextInput
-                style={styles.modalInput}
-                value={factoryResetPassword}
-                onChangeText={setFactoryResetPassword}
-                placeholder="e.g. 12345678 (leave empty if unknown)"
-                autoCapitalize="characters"
-                autoFocus
-                maxLength={8}
-                onSubmitEditing={confirmFactoryReset}
-              />
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={styles.modalCancel}
-                  onPress={() => { setFactoryResetConfirmVisible(false); setFactoryResetPassword(''); }}
-                  disabled={factoryResetting}
-                >
-                  <Text style={styles.modalCancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalSave, styles.modalDestructive]}
-                  onPress={confirmFactoryReset}
-                  disabled={factoryResetting}
-                >
-                  {factoryResetting ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.modalSaveText}>Reset</Text>
-                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -960,28 +831,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   retryText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  factoryResetButton: {
-    marginTop: 16,
-    borderRadius: 10,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#d9534f',
-  },
-  factoryResetText: { color: '#d9534f', fontSize: 15, fontWeight: '600' },
-  factoryResetContainer: {
-    position: 'absolute',
-    bottom: 32,
-    left: 32,
-    right: 32,
-    alignItems: 'center',
-  },
-  factoryResetHint: {
-    fontSize: 12,
-    color: '#999',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
   emptyIcon: { fontSize: 48, marginBottom: 16 },
   emptyTitle: { fontSize: 20, fontWeight: '600', color: '#333', marginBottom: 8 },
   emptyText: { fontSize: 14, color: '#888', textAlign: 'center' },

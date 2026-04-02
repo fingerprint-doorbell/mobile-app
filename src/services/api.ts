@@ -132,21 +132,6 @@ export async function unpairSensor(sensor: SensorConfig): Promise<void> {
   }
 }
 
-export async function factoryResetSensor(sensor: SensorConfig, oldPassword?: string): Promise<void> {
-  let url = `${baseUrl(sensor)}/factory_reset`;
-  if (oldPassword) {
-    url += `?password=${encodeURIComponent(oldPassword)}`;
-  }
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: buildHeaders(sensor),
-  });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || `Factory reset failed: ${response.status}`);
-  }
-}
-
 export async function exportTemplate(
   sensor: SensorConfig,
   id: number,
